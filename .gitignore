@@ -7,3 +7,9 @@
 .DS_Store
 .idea/
 .vscode/
+
+# local agent skills (installed per-machine, not part of the project;
+# .agents/plugins/ and .claude/ project files stay tracked)
+/.claude/skills/
+/.agents/skills/
+/skills-lock.json
