@@ -1,0 +1,9 @@
+# build artifacts
+/dist/
+/weeek
+*.test
+
+# os / editors
+.DS_Store
+.idea/
+.vscode/
