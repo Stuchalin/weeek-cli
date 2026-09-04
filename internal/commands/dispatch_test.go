@@ -144,12 +144,6 @@ func TestRegistry_RunHelp(t *testing.T) {
 	t.Parallel()
 
 	registry := NewRegistry("test-version")
-	registry.Register(Command{
-		Name:  "task list",
-		Usage: "task list [flags]",
-		Short: "List tasks",
-		Run:   func(*Ctx) error { return nil },
-	})
 
 	tests := []struct {
 		name     string

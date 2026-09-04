@@ -60,11 +60,6 @@ func TestNeedsToken(t *testing.T) {
 	t.Parallel()
 
 	registry := commands.NewRegistry("test-version")
-	registry.Register(commands.Command{
-		Name:  "task list",
-		Usage: "task list",
-		Run:   func(*commands.Ctx) error { return nil },
-	})
 
 	tests := []struct {
 		name string

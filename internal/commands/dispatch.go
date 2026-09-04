@@ -52,6 +52,7 @@ func NewRegistry(version string) Registry {
 	registerAuthCommands(registry)
 	registerMeCommand(registry)
 	registerWorkspaceCommands(registry)
+	registerTaskCommands(registry)
 	registry.Register(versionCommand(version))
 	return registry
 }
