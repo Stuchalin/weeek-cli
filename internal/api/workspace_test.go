@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -44,15 +43,6 @@ func TestClient_WorkspaceMethods(t *testing.T) {
 			path:   "/ws/tags",
 			call: func(ctx context.Context, client *Client) (json.RawMessage, error) {
 				return client.ListTags(ctx)
-			},
-		},
-		{
-			name:        "get tag",
-			method:      http.MethodGet,
-			path:        "/ws/tags/tag/one",
-			escapedPath: "/ws/tags/tag%2Fone",
-			call: func(ctx context.Context, client *Client) (json.RawMessage, error) {
-				return client.GetTag(ctx, "tag/one")
 			},
 		},
 		{
@@ -138,27 +128,5 @@ func TestClient_WorkspaceMethods(t *testing.T) {
 				t.Errorf("workspace method response = %q, want %q", got, responseBody)
 			}
 		})
-	}
-}
-
-func TestClient_GetTagError(t *testing.T) {
-	t.Parallel()
-
-	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
-		response.WriteHeader(http.StatusNotFound)
-		if _, err := response.Write([]byte(`{"message":"tag not found"}`)); err != nil {
-			t.Errorf("write response body: %v", err)
-		}
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "test-token", server.Client())
-	_, err := client.GetTag(t.Context(), "404")
-	var apiErr *APIError
-	if !errors.As(err, &apiErr) {
-		t.Fatalf("GetTag() error = %v, want APIError", err)
-	}
-	if apiErr.Status != http.StatusNotFound {
-		t.Errorf("GetTag() status = %d, want %d", apiErr.Status, http.StatusNotFound)
 	}
 }

@@ -91,7 +91,7 @@ func authStatusCommand() Command {
 			if err != nil {
 				var apiErr *api.APIError
 				if errors.As(err, &apiErr) && apiErr.Status == http.StatusUnauthorized {
-					return errors.New("token is invalid or expired")
+					return &invalidTokenError{cause: apiErr}
 				}
 
 				return err
@@ -123,6 +123,18 @@ func authLogoutCommand() Command {
 			return nil
 		},
 	}
+}
+
+type invalidTokenError struct {
+	cause error
+}
+
+func (e *invalidTokenError) Error() string {
+	return "token is invalid or expired"
+}
+
+func (e *invalidTokenError) Unwrap() error {
+	return e.cause
 }
 
 func promptToken(reader io.Reader, writer io.Writer) (string, error) {

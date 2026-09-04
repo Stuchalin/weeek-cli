@@ -26,7 +26,7 @@ func registerProjectCommands(registry Registry) {
 }
 
 func projectListCommand() Command {
-	return entityListCommand(
+	return readCommand(
 		"project list",
 		"List projects",
 		func(ctx context.Context, client *api.Client) (json.RawMessage, error) {
@@ -36,7 +36,7 @@ func projectListCommand() Command {
 }
 
 func projectGetCommand() Command {
-	return projectEntityIDCommand(
+	return entityIDCommand(
 		"project get",
 		"Get a project",
 		func(ctx context.Context, client *api.Client, id string) (json.RawMessage, error) {
@@ -122,7 +122,7 @@ func projectUpdateCommand() Command {
 }
 
 func projectDeleteCommand() Command {
-	return projectEntityIDCommand(
+	return entityIDCommand(
 		"project delete",
 		"Delete a project",
 		func(ctx context.Context, client *api.Client, id string) (json.RawMessage, error) {
@@ -132,7 +132,7 @@ func projectDeleteCommand() Command {
 }
 
 func projectArchiveCommand() Command {
-	return projectEntityIDCommand(
+	return entityIDCommand(
 		"project archive",
 		"Archive a project",
 		func(ctx context.Context, client *api.Client, id string) (json.RawMessage, error) {
@@ -142,7 +142,7 @@ func projectArchiveCommand() Command {
 }
 
 func projectUnarchiveCommand() Command {
-	return projectEntityIDCommand(
+	return entityIDCommand(
 		"project unarchive",
 		"Restore an archived project",
 		func(ctx context.Context, client *api.Client, id string) (json.RawMessage, error) {
@@ -194,7 +194,7 @@ func portfolioListCommand() Command {
 }
 
 func portfolioGetCommand() Command {
-	return projectEntityIDCommand(
+	return entityIDCommand(
 		"portfolio get",
 		"Get a portfolio",
 		func(ctx context.Context, client *api.Client, id string) (json.RawMessage, error) {
@@ -249,48 +249,13 @@ func portfolioUpdateCommand() Command {
 }
 
 func portfolioDeleteCommand() Command {
-	return projectEntityIDCommand(
+	return entityIDCommand(
 		"portfolio delete",
 		"Delete a portfolio",
 		func(ctx context.Context, client *api.Client, id string) (json.RawMessage, error) {
 			return client.DeletePortfolio(ctx, id)
 		},
 	)
-}
-
-func entityListCommand(
-	name string,
-	short string,
-	request func(context.Context, *api.Client) (json.RawMessage, error),
-) Command {
-	return Command{
-		Name:  name,
-		Usage: name,
-		Short: short,
-		Run: func(ctx *Ctx) error {
-			if len(ctx.Args) != 0 {
-				return &usageError{err: errors.New(name + " does not accept arguments")}
-			}
-			client, err := requireClient(ctx)
-			if err != nil {
-				return err
-			}
-
-			response, err := request(context.Background(), client)
-			if err != nil {
-				return err
-			}
-			return writeRawJSON(ctx.Stdout, response)
-		},
-	}
-}
-
-func projectEntityIDCommand(
-	name string,
-	short string,
-	request func(context.Context, *api.Client, string) (json.RawMessage, error),
-) Command {
-	return boardEntityIDCommand(name, short, request)
 }
 
 func validateProjectFields(fs *flag.FlagSet, name string, isPrivate int, portfolioID *int64) error {

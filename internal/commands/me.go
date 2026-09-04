@@ -20,15 +20,16 @@ func meCommand() Command {
 			if len(ctx.Args) != 0 {
 				return &usageError{err: errors.New("me does not accept arguments")}
 			}
-			if ctx.Client == nil {
-				return errors.New("api client is not configured")
-			}
-
-			user, _, err := ctx.Client.GetMe(context.Background())
+			client, err := requireClient(ctx)
 			if err != nil {
 				return err
 			}
-			workspace, err := ctx.Client.GetWorkspace(context.Background())
+
+			user, _, err := client.GetMe(context.Background())
+			if err != nil {
+				return err
+			}
+			workspace, err := client.GetWorkspace(context.Background())
 			if err != nil {
 				return err
 			}

@@ -1,13 +1,13 @@
 BINARY := weeek
 VERSION ?= $(shell git describe --tags --always 2>/dev/null || echo dev)
-LDFLAGS := -X main.version=$(VERSION)
+export WEEEK_BUILD_VERSION := $(VERSION)
 TARGET_OSES ?= darwin linux
 TARGET_ARCHES ?= amd64 arm64
 
 .PHONY: build test vet release-build check-plugin clean
 
 build:
-	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o $(BINARY) ./cmd/weeek
+	CGO_ENABLED=0 go build -ldflags "-X main.version=$$WEEEK_BUILD_VERSION" -o $(BINARY) ./cmd/weeek
 
 test:
 	go test ./...
@@ -21,7 +21,7 @@ release-build:
 		for arch in $(TARGET_ARCHES); do \
 			echo "building $$os/$$arch"; \
 			CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build \
-				-ldflags "$(LDFLAGS)" \
+				-ldflags "-X main.version=$$WEEEK_BUILD_VERSION" \
 				-o "dist/weeek_$${os}_$${arch}" ./cmd/weeek || exit 1; \
 		done; \
 	done

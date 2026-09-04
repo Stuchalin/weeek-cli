@@ -1,1 +1,1 @@
-{"user":{"id":42,"name":"Test User"},"workspace":{"success":true,"workspace":{"id":7,"title":"Test Workspace"}}}
+{"user":{"success":true,"user":{"id":"user-42","name":"Test User"}},"workspace":{"success":true,"workspace":{"id":7,"title":"Test Workspace"}}}

@@ -11,6 +11,11 @@ weeek task list --responsible me --completed=false \
 
 ## Installation
 
+Publication status: the GitHub repository and its first release have not been
+published yet. Until those external steps are complete, build the CLI from a
+local checkout with `make build`. The download, `go install`, and plugin install
+commands below apply after publication.
+
 ### Pre-built binaries
 
 Download the binary for your platform and its `.sha256` file from
@@ -136,6 +141,9 @@ The CLI intentionally uses only the Go standard library. This keeps the binary
 and dependency surface small; command output is protected by golden tests because
 it is an interface consumed by agents.
 
+Development requires Go 1.27 or later, Make, and Python 3. The plugin validation
+scripts invoked by `make check-plugin` use Python 3.
+
 ```sh
 make build
 make test
@@ -149,6 +157,7 @@ make release-build
 
 ## Release process
 
-Before tagging a release, update the version in both plugin manifests and the
-CLI compatibility version in `plugin/skills/weeek/SKILL.md`, then run
-`make check-plugin`. Keep these three values identical.
+Before tagging a release, update the version in `plugin/.claude-plugin/plugin.json`,
+`plugin/.codex-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and the CLI
+compatibility version in `plugin/skills/weeek/SKILL.md`, then run
+`make check-plugin`. Keep all four values identical.

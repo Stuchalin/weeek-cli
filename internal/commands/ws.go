@@ -21,7 +21,7 @@ func registerWorkspaceCommands(registry Registry) {
 }
 
 func workspaceInfoCommand() Command {
-	return workspaceReadCommand(
+	return readCommand(
 		"ws info",
 		"Show workspace information",
 		func(ctx context.Context, client *api.Client) (json.RawMessage, error) {
@@ -31,7 +31,7 @@ func workspaceInfoCommand() Command {
 }
 
 func workspaceMembersCommand() Command {
-	return workspaceReadCommand(
+	return readCommand(
 		"ws members",
 		"List workspace members",
 		func(ctx context.Context, client *api.Client) (json.RawMessage, error) {
@@ -41,7 +41,7 @@ func workspaceMembersCommand() Command {
 }
 
 func workspaceTagListCommand() Command {
-	return workspaceReadCommand(
+	return readCommand(
 		"ws tag list",
 		"List workspace tags",
 		func(ctx context.Context, client *api.Client) (json.RawMessage, error) {
@@ -175,38 +175,19 @@ func workspaceAttachmentGetCommand() Command {
 	}
 }
 
-func workspaceReadCommand(
-	name string,
-	short string,
-	request func(context.Context, *api.Client) (json.RawMessage, error),
-) Command {
-	return Command{
-		Name:  name,
-		Usage: name,
-		Short: short,
-		Run: func(ctx *Ctx) error {
-			if len(ctx.Args) != 0 {
-				return &usageError{err: errors.New(name + " does not accept arguments")}
-			}
-			client, err := requireClient(ctx)
-			if err != nil {
-				return err
-			}
-
-			response, err := request(context.Background(), client)
-			if err != nil {
-				return err
-			}
-
-			return writeRawJSON(ctx.Stdout, response)
-		},
-	}
-}
-
 func requireClient(ctx *Ctx) (*api.Client, error) {
-	if ctx.Client == nil {
+	if ctx.Client != nil {
+		return ctx.Client, nil
+	}
+	if ctx.ResolveToken == nil || ctx.NewAPIClient == nil {
 		return nil, errors.New("api client is not configured")
 	}
+	token, err := ctx.ResolveToken()
+	if err != nil {
+		return nil, err
+	}
+	ctx.Client = ctx.NewAPIClient(token)
+
 	return ctx.Client, nil
 }
 

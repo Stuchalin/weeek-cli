@@ -15,7 +15,9 @@ func TestMeGolden(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		switch request.URL.Path {
 		case "/user/me":
-			if _, err := response.Write([]byte(`{"id":42,"name":"Test User"}`)); err != nil {
+			if _, err := response.Write(
+				[]byte(`{"success":true,"user":{"id":"user-42","name":"Test User"}}`),
+			); err != nil {
 				t.Errorf("write user response: %v", err)
 			}
 		case "/ws":

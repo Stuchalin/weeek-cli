@@ -2,6 +2,7 @@
 package commands
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -16,6 +17,7 @@ import (
 // Ctx contains the dependencies and arguments available to a command.
 type Ctx struct {
 	Client       *api.Client
+	ResolveToken func() (string, error)
 	NewAPIClient func(string) *api.Client
 	Stdin        io.Reader
 	Stdout       io.Writer
@@ -290,6 +292,62 @@ func runCommand(command Command, ctx *Ctx) (runErr error) {
 	}()
 
 	return command.Run(ctx)
+}
+
+func readCommand(
+	name string,
+	short string,
+	request func(context.Context, *api.Client) (json.RawMessage, error),
+) Command {
+	return Command{
+		Name:  name,
+		Usage: name,
+		Short: short,
+		Run: func(ctx *Ctx) error {
+			if len(ctx.Args) != 0 {
+				return &usageError{err: errors.New(name + " does not accept arguments")}
+			}
+			client, err := requireClient(ctx)
+			if err != nil {
+				return err
+			}
+
+			response, err := request(context.Background(), client)
+			if err != nil {
+				return err
+			}
+			return writeRawJSON(ctx.Stdout, response)
+		},
+	}
+}
+
+func entityIDCommand(
+	name string,
+	short string,
+	request func(context.Context, *api.Client, string) (json.RawMessage, error),
+) Command {
+	return Command{
+		Name:  name,
+		Usage: name + " ID",
+		Short: short,
+		Run: func(ctx *Ctx) error {
+			fs := flag.NewFlagSet(name, flag.ContinueOnError)
+			id, err := parseID(fs, ctx.Args, name)
+			if err != nil {
+				return err
+			}
+			client, err := requireClient(ctx)
+			if err != nil {
+				return err
+			}
+
+			response, err := request(context.Background(), client, id)
+			if err != nil {
+				return err
+			}
+			return writeRawJSON(ctx.Stdout, response)
+		},
+	}
 }
 
 func writeCommandUsage(writer io.Writer, command Command, err error) {

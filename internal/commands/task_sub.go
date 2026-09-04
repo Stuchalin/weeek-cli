@@ -49,14 +49,14 @@ func registerTaskSubcommands(registry Registry) {
 			return client.RemoveTaskWatchers(ctx, taskID, users)
 		},
 	))
-	registry.Register(taskIDCommand(
+	registry.Register(entityIDCommand(
 		"task timer start",
 		"Start a task timer",
 		func(ctx context.Context, client *api.Client, taskID string) (json.RawMessage, error) {
 			return client.StartTaskTimer(ctx, taskID)
 		},
 	))
-	registry.Register(taskIDCommand(
+	registry.Register(entityIDCommand(
 		"task timer stop",
 		"Stop a task timer",
 		func(ctx context.Context, client *api.Client, taskID string) (json.RawMessage, error) {

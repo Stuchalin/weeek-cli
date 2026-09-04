@@ -87,7 +87,7 @@ func TestAuthStatus(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("WEEEK_TOKEN", "status-token")
 
-	const responseBody = `{"id":42,"name":"Test User"}`
+	const responseBody = `{"success":true,"user":{"id":"user-42","name":"Test User"}}`
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		if request.URL.Path != "/user/me" {
 			t.Errorf("request path = %q, want %q", request.URL.Path, "/user/me")
@@ -142,7 +142,7 @@ func TestAuthStatusUnauthorized(t *testing.T) {
 	if code != 1 {
 		t.Errorf("auth status code = %d, want 1", code)
 	}
-	if got := stderr.String(); got != "{\"error\":\"token is invalid or expired\",\"status\":0}\n" {
+	if got := stderr.String(); got != "{\"error\":\"token is invalid or expired\",\"status\":401}\n" {
 		t.Errorf("auth status stderr = %q, want invalid-token error", got)
 	}
 }

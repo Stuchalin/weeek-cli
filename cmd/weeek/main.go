@@ -9,7 +9,7 @@ import (
 	"github.com/Stuchalin/weeek-cli/internal/commands"
 )
 
-const apiBaseURL = "https://api.weeek.net/public/v1"
+var apiBaseURL = "https://api.weeek.net/public/v1"
 
 var version = "dev"
 
@@ -24,6 +24,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 func runWithInput(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	registry := commands.NewRegistry(version)
 	ctx := &commands.Ctx{
+		ResolveToken: auth.Token,
 		NewAPIClient: func(token string) *api.Client {
 			return api.NewClient(apiBaseURL, token, nil)
 		},
@@ -31,26 +32,5 @@ func runWithInput(args []string, stdin io.Reader, stdout, stderr io.Writer) int 
 		Stdout: stdout,
 		Stderr: stderr,
 	}
-	if needsToken(args, registry) {
-		token, err := auth.Token()
-		if err != nil {
-			commands.WriteError(stderr, err)
-			return 1
-		}
-		ctx.Client = api.NewClient(apiBaseURL, token, nil)
-	}
-
 	return registry.Run(args, ctx)
-}
-
-func needsToken(args []string, registry commands.Registry) bool {
-	if len(args) == 0 {
-		return false
-	}
-	switch args[0] {
-	case "auth", "help", "version":
-		return false
-	}
-
-	return registry.HasCommand(args)
 }

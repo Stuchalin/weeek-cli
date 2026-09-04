@@ -51,11 +51,18 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Build
-        run: >-
-          make release-build
-          TARGET_OSES=${{ matrix.goos }}
-          TARGET_ARCHES=${{ matrix.goarch }}
-          VERSION=${{ github.ref_name }}
+        shell: bash
+        env:
+          WEEEK_RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$WEEEK_RELEASE_VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "invalid release tag: $WEEEK_RELEASE_VERSION" >&2
+            exit 1
+          fi
+          VERSION="$WEEEK_RELEASE_VERSION" make release-build \
+            TARGET_OSES=${{ matrix.goos }} \
+            TARGET_ARCHES=${{ matrix.goarch }}
       - name: Upload binary
         uses: actions/upload-artifact@v7
         with:

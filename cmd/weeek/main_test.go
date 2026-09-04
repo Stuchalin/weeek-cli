@@ -2,10 +2,12 @@ package main
 
 import (
 	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/Stuchalin/weeek-cli/internal/commands"
+	"github.com/Stuchalin/weeek-cli/internal/auth"
 )
 
 func TestRunCommandsWithoutToken(t *testing.T) {
@@ -13,9 +15,10 @@ func TestRunCommandsWithoutToken(t *testing.T) {
 	t.Setenv("WEEEK_TOKEN", "")
 
 	tests := []struct {
-		name     string
-		args     []string
-		wantCode int
+		name           string
+		args           []string
+		wantCode       int
+		wantTokenError bool
 	}{
 		{
 			name: "bare invocation",
@@ -38,6 +41,17 @@ func TestRunCommandsWithoutToken(t *testing.T) {
 			args:     []string{"unknown"},
 			wantCode: 2,
 		},
+		{
+			name:     "invalid api command usage",
+			args:     []string{"task", "list", "--definitely-unknown"},
+			wantCode: 2,
+		},
+		{
+			name:           "valid api command",
+			args:           []string{"task", "list"},
+			wantCode:       1,
+			wantTokenError: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -49,36 +63,59 @@ func TestRunCommandsWithoutToken(t *testing.T) {
 			if gotCode != tt.wantCode {
 				t.Errorf("run() code = %d, want %d", gotCode, tt.wantCode)
 			}
-			if strings.Contains(stderr.String(), "token not found") {
-				t.Errorf("run() stderr = %q, must not resolve token", stderr.String())
+			hasTokenError := strings.Contains(stderr.String(), "token not found")
+			if hasTokenError != tt.wantTokenError {
+				t.Errorf("run() stderr = %q, token error = %t, want %t", stderr.String(), hasTokenError, tt.wantTokenError)
 			}
 		})
 	}
 }
 
-func TestNeedsToken(t *testing.T) {
-	t.Parallel()
-
-	registry := commands.NewRegistry("test-version")
-
+func TestRunAPICommandTokenSources(t *testing.T) {
 	tests := []struct {
-		name string
-		args []string
-		want bool
+		name  string
+		value string
+		save  bool
 	}{
-		{name: "bare invocation"},
-		{name: "help", args: []string{"help"}},
-		{name: "version", args: []string{"version"}},
-		{name: "auth", args: []string{"auth", "status"}},
-		{name: "registered api command", args: []string{"task", "list"}, want: true},
-		{name: "unknown command", args: []string{"unknown"}},
+		{name: "environment", value: "test-env-value"},
+		{name: "config", value: "test-config-value", save: true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			if got := needsToken(tt.args, registry); got != tt.want {
-				t.Errorf("needsToken(%v) = %t, want %t", tt.args, got, tt.want)
+			t.Setenv("HOME", t.TempDir())
+			if tt.save {
+				t.Setenv("WEEEK_TOKEN", "")
+				if err := auth.Save(tt.value); err != nil {
+					t.Fatalf("Save() error = %v", err)
+				}
+			} else {
+				t.Setenv("WEEEK_TOKEN", tt.value)
+			}
+
+			server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+				if got := request.Header.Get("Authorization"); got != "Bearer "+tt.value {
+					t.Errorf("Authorization header = %q, want %q", got, "Bearer "+tt.value)
+				}
+				if request.URL.Path != "/ws" {
+					t.Errorf("request path = %q, want %q", request.URL.Path, "/ws")
+				}
+				_, _ = response.Write([]byte(`{"success":true}`))
+			}))
+			defer server.Close()
+
+			originalBaseURL := apiBaseURL
+			apiBaseURL = server.URL
+			defer func() { apiBaseURL = originalBaseURL }()
+
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			code := runWithInput([]string{"ws", "info"}, strings.NewReader(""), &stdout, &stderr)
+			if code != 0 {
+				t.Fatalf("runWithInput() code = %d, want 0; stderr = %q", code, stderr.String())
+			}
+			if got := stdout.String(); got != "{\"success\":true}\n" {
+				t.Errorf("runWithInput() stdout = %q, want API response", got)
 			}
 		})
 	}

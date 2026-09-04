@@ -129,7 +129,7 @@ func TestTaskListResolvesMeOnce(t *testing.T) {
 		switch request.URL.Path {
 		case "/user/me":
 			meCalls.Add(1)
-			_, _ = response.Write([]byte(`{"id":"user-me"}`))
+			_, _ = response.Write([]byte(`{"success":true,"user":{"id":"user-me"}}`))
 		case "/tm/tasks":
 			if got := request.URL.Query().Get("userId"); got != "user-me" {
 				t.Errorf("userId = %q, want %q", got, "user-me")

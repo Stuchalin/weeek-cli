@@ -212,6 +212,71 @@ func TestClient_DoNetworkErrors(t *testing.T) {
 	}
 }
 
+func TestClient_DoResponseReadError(t *testing.T) {
+	t.Parallel()
+
+	body := &failingReadCloser{readErr: io.ErrUnexpectedEOF}
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     make(http.Header),
+			Body:       body,
+		}, nil
+	})
+	client := NewClient("https://example.test", "secret", &http.Client{Transport: transport})
+
+	response, err := client.do(t.Context(), http.MethodGet, "/items", nil)
+	if err == nil {
+		t.Fatal("do() error = nil, want response read error")
+	}
+	if !errors.Is(err, io.ErrUnexpectedEOF) {
+		t.Errorf("do() error = %v, want wrapped cause %v", err, io.ErrUnexpectedEOF)
+	}
+	if response != nil {
+		t.Errorf("do() response = %q, want nil", response)
+	}
+	if !body.closed {
+		t.Error("do() did not close response body after read error")
+	}
+}
+
+func TestClient_DoStopsWhenRetryWaitFails(t *testing.T) {
+	t.Parallel()
+
+	requests := 0
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
+		requests++
+		return &http.Response{
+			StatusCode: http.StatusTooManyRequests,
+			Header:     make(http.Header),
+			Body:       io.NopCloser(strings.NewReader(`{"message":"retry later"}`)),
+		}, nil
+	})
+	client := NewClient("https://example.test", "secret", &http.Client{Transport: transport})
+	client.sleep = func(context.Context, time.Duration) error {
+		return context.Canceled
+	}
+
+	_, err := client.do(t.Context(), http.MethodGet, "/items", nil)
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("do() error = %v, want wrapped cause %v", err, context.Canceled)
+	}
+	if requests != 1 {
+		t.Errorf("request count = %d, want 1", requests)
+	}
+}
+
+func TestSleepContextCancellation(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	if err := sleepContext(ctx, time.Hour); !errors.Is(err, context.Canceled) {
+		t.Errorf("sleepContext() error = %v, want %v", err, context.Canceled)
+	}
+}
+
 func TestClient_DoDoesNotRetryNonGET(t *testing.T) {
 	t.Parallel()
 
@@ -244,6 +309,20 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (fn roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
 	return fn(request)
+}
+
+type failingReadCloser struct {
+	readErr error
+	closed  bool
+}
+
+func (r *failingReadCloser) Read([]byte) (int, error) {
+	return 0, r.readErr
+}
+
+func (r *failingReadCloser) Close() error {
+	r.closed = true
+	return nil
 }
 
 func equalDurations(left, right []time.Duration) bool {

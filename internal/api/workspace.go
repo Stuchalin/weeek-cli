@@ -34,11 +34,6 @@ func (c *Client) ListTags(ctx context.Context) (json.RawMessage, error) {
 	return c.do(ctx, http.MethodGet, "/ws/tags", nil)
 }
 
-// GetTag returns one workspace tag.
-func (c *Client) GetTag(ctx context.Context, id string) (json.RawMessage, error) {
-	return c.do(ctx, http.MethodGet, tagPath(id), nil)
-}
-
 // CreateTag creates a workspace tag.
 func (c *Client) CreateTag(ctx context.Context, input TagCreate) (json.RawMessage, error) {
 	return c.doJSON(ctx, http.MethodPost, "/ws/tags", input)

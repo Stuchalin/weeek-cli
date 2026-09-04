@@ -127,7 +127,7 @@ func boardUpdateCommand() Command {
 }
 
 func boardDeleteCommand() Command {
-	return boardEntityIDCommand(
+	return entityIDCommand(
 		"board delete",
 		"Delete a board",
 		func(ctx context.Context, client *api.Client, id string) (json.RawMessage, error) {
@@ -223,7 +223,7 @@ func columnUpdateCommand() Command {
 }
 
 func columnDeleteCommand() Command {
-	return boardEntityIDCommand(
+	return entityIDCommand(
 		"column delete",
 		"Delete a board column",
 		func(ctx context.Context, client *api.Client, id string) (json.RawMessage, error) {
@@ -305,35 +305,6 @@ func moveEntityCommand(
 				id,
 				int64PointerIfSet(fs, "after", afterID),
 			)
-			if err != nil {
-				return err
-			}
-			return writeRawJSON(ctx.Stdout, response)
-		},
-	}
-}
-
-func boardEntityIDCommand(
-	name string,
-	short string,
-	request func(context.Context, *api.Client, string) (json.RawMessage, error),
-) Command {
-	return Command{
-		Name:  name,
-		Usage: name + " ID",
-		Short: short,
-		Run: func(ctx *Ctx) error {
-			fs := flag.NewFlagSet(name, flag.ContinueOnError)
-			id, err := parseID(fs, ctx.Args, name)
-			if err != nil {
-				return err
-			}
-			client, err := requireClient(ctx)
-			if err != nil {
-				return err
-			}
-
-			response, err := request(context.Background(), client, id)
 			if err != nil {
 				return err
 			}
