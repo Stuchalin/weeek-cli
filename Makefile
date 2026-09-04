@@ -1,6 +1,8 @@
 BINARY := weeek
 VERSION ?= $(shell git describe --tags --always 2>/dev/null || echo dev)
 LDFLAGS := -X main.version=$(VERSION)
+TARGET_OSES ?= darwin linux
+TARGET_ARCHES ?= amd64 arm64
 
 .PHONY: build test vet release-build check-plugin clean
 
@@ -15,8 +17,8 @@ vet:
 
 release-build:
 	mkdir -p dist
-	@for os in darwin linux; do \
-		for arch in amd64 arm64; do \
+	@for os in $(TARGET_OSES); do \
+		for arch in $(TARGET_ARCHES); do \
 			echo "building $$os/$$arch"; \
 			CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build \
 				-ldflags "$(LDFLAGS)" \
