@@ -6,7 +6,7 @@ description: "Управляйте Weeek: задачи, таски, доски �
 # Weeek CLI
 
 Use the `weeek` CLI to read and modify Weeek task-manager and workspace data.
-The CLI compatibility version documented by this skill is `0.0.0`.
+The CLI compatibility version documented by this skill is `0.1.0`.
 
 ## Check the environment
 
