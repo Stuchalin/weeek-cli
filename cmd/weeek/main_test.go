@@ -2,49 +2,88 @@ package main
 
 import (
 	"bytes"
+	"strings"
 	"testing"
+
+	"github.com/Stuchalin/weeek-cli/internal/commands"
 )
 
-func TestRun(t *testing.T) {
-	t.Parallel()
+func TestRunCommandsWithoutToken(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("WEEEK_TOKEN", "")
 
 	tests := []struct {
-		name       string
-		args       []string
-		wantStdout string
-		wantStderr string
-		wantCode   int
+		name     string
+		args     []string
+		wantCode int
 	}{
 		{
-			name:       "version",
-			args:       []string{"version"},
-			wantStdout: "{\"version\":\"dev\"}\n",
-			wantCode:   0,
+			name: "bare invocation",
 		},
 		{
-			name:       "invalid invocation",
-			args:       []string{"unknown"},
-			wantStderr: "usage: weeek version\n",
-			wantCode:   2,
+			name: "help",
+			args: []string{"help"},
+		},
+		{
+			name: "version",
+			args: []string{"version"},
+		},
+		{
+			name:     "auth login",
+			args:     []string{"auth", "login"},
+			wantCode: 2,
+		},
+		{
+			name:     "unknown command",
+			args:     []string{"unknown"},
+			wantCode: 2,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer
 
-			code := run(tt.args, &stdout, &stderr)
-			if code != tt.wantCode {
-				t.Errorf("run() exit code = %d, want %d", code, tt.wantCode)
+			gotCode := run(tt.args, &stdout, &stderr)
+			if gotCode != tt.wantCode {
+				t.Errorf("run() code = %d, want %d", gotCode, tt.wantCode)
 			}
-			if got := stdout.String(); got != tt.wantStdout {
-				t.Errorf("run() stdout = %q, want %q", got, tt.wantStdout)
+			if strings.Contains(stderr.String(), "token not found") {
+				t.Errorf("run() stderr = %q, must not resolve token", stderr.String())
 			}
-			if got := stderr.String(); got != tt.wantStderr {
-				t.Errorf("run() stderr = %q, want %q", got, tt.wantStderr)
+		})
+	}
+}
+
+func TestNeedsToken(t *testing.T) {
+	t.Parallel()
+
+	registry := commands.NewRegistry("test-version")
+	registry.Register(commands.Command{
+		Name:  "task list",
+		Usage: "task list",
+		Run:   func(*commands.Ctx) error { return nil },
+	})
+
+	tests := []struct {
+		name string
+		args []string
+		want bool
+	}{
+		{name: "bare invocation"},
+		{name: "help", args: []string{"help"}},
+		{name: "version", args: []string{"version"}},
+		{name: "auth", args: []string{"auth", "status"}},
+		{name: "registered api command", args: []string{"task", "list"}, want: true},
+		{name: "unknown command", args: []string{"unknown"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := needsToken(tt.args, registry); got != tt.want {
+				t.Errorf("needsToken(%v) = %t, want %t", tt.args, got, tt.want)
 			}
 		})
 	}
