@@ -13,11 +13,10 @@ import (
 )
 
 const (
-	taskCreateUsage = "task create --title TITLE [--description TEXT] [--project ID] [--board ID] " +
-		"[--column ID] [--responsible ID|me] [--type TYPE] [--priority N] [--due DATE] " +
-		"[--tags ID[,ID...]] [--parent ID]"
-	taskUpdateUsage = "task update ID [--title TITLE] [--description TEXT] [--responsible ID|me] " +
-		"[--type TYPE] [--priority N] [--due DATE] [--tags ID[,ID...]]"
+	taskCreateUsage = "task create --title TITLE [--description TEXT] [--project ID [--column ID]] " +
+		"[--responsible ID|me] [--type TYPE] [--priority N] [--day DATE] [--parent ID]"
+	taskUpdateUsage = "task update ID [--title TITLE] [--type TYPE] [--priority N] " +
+		"[--due DATE] [--tags ID[,ID...]]"
 )
 
 type stringListFlag []string
@@ -168,14 +167,11 @@ func taskCreateCommand() Command {
 			title := fs.String("title", "", "Task title")
 			description := fs.String("description", "", "Task description")
 			projectID := fs.Int64("project", 0, "Project ID")
-			boardID := fs.Int64("board", 0, "Board ID")
 			columnID := fs.Int64("column", 0, "Board column ID")
 			responsible := fs.String("responsible", "", "Responsible user ID or me")
 			taskType := fs.String("type", "", "Task type")
 			priority := fs.Int("priority", 0, "Priority from 0 to 3")
-			dueDate := fs.String("due", "", "Due date")
-			var tags stringListFlag
-			fs.Var(&tags, "tags", "Tag IDs, comma-separated or repeated")
+			day := fs.String("day", "", "Task day")
 			parentID := fs.Int64("parent", 0, "Parent task ID")
 			if err := parseNoPositionals(fs, ctx.Args, "task create"); err != nil {
 				return err
@@ -187,11 +183,13 @@ func taskCreateCommand() Command {
 				fs,
 				priority,
 				projectID,
-				boardID,
 				columnID,
 				parentID,
 			); err != nil {
 				return err
+			}
+			if flagWasSet(fs, "column") && !flagWasSet(fs, "project") {
+				return &usageError{err: errors.New("--column requires --project")}
 			}
 
 			client, err := requireClient(ctx)
@@ -206,20 +204,18 @@ func taskCreateCommand() Command {
 			if err != nil {
 				return err
 			}
-			parsedTags, err := parseNumericTags(tags)
-			if err != nil {
-				return &usageError{err: err}
-			}
-
-			input := api.TaskCreate{Title: *title, Tags: parsedTags}
+			input := api.TaskCreate{Title: *title, Locations: []api.TaskCreateLocation{}}
 			input.Description = stringPointerIfSet(fs, "description", description)
-			input.ProjectID = int64PointerIfSet(fs, "project", projectID)
-			input.BoardID = int64PointerIfSet(fs, "board", boardID)
-			input.BoardColumnID = int64PointerIfSet(fs, "column", columnID)
+			input.Day = stringPointerIfSet(fs, "day", day)
+			if flagWasSet(fs, "project") {
+				input.Locations = append(input.Locations, api.TaskCreateLocation{
+					ProjectID:     *projectID,
+					BoardColumnID: int64PointerIfSet(fs, "column", columnID),
+				})
+			}
 			input.ResponsibleID = valuePointerIfSet(fs, "responsible", resolvedResponsible)
 			input.Type = stringPointerIfSet(fs, "type", taskType)
 			input.Priority = intPointerIfSet(fs, "priority", priority)
-			input.DueDate = stringPointerIfSet(fs, "due", dueDate)
 			input.ParentID = int64PointerIfSet(fs, "parent", parentID)
 
 			response, err := client.CreateTask(context.Background(), input)
@@ -239,8 +235,6 @@ func taskUpdateCommand() Command {
 		Run: func(ctx *Ctx) error {
 			fs := flag.NewFlagSet("task update", flag.ContinueOnError)
 			title := fs.String("title", "", "Task title")
-			description := fs.String("description", "", "Task description")
-			responsible := fs.String("responsible", "", "Responsible user ID or me")
 			taskType := fs.String("type", "", "Task type")
 			priority := fs.Int("priority", 0, "Priority from 0 to 3")
 			dueDate := fs.String("due", "", "Due date")
@@ -256,31 +250,21 @@ func taskUpdateCommand() Command {
 			if flagWasSet(fs, "priority") && (*priority < 0 || *priority > 3) {
 				return &usageError{err: errors.New("--priority must be between 0 and 3")}
 			}
-
-			client, err := requireClient(ctx)
-			if err != nil {
-				return err
-			}
-			resolvedResponsible, err := resolveResponsible(
-				context.Background(),
-				client,
-				*responsible,
-			)
-			if err != nil {
-				return err
-			}
 			parsedTags, err := parseNumericTags(tags)
 			if err != nil {
 				return &usageError{err: err}
 			}
 
+			client, err := requireClient(ctx)
+			if err != nil {
+				return err
+			}
+
 			input := api.TaskUpdate{
-				Title:         stringPointerIfSet(fs, "title", title),
-				Description:   stringPointerIfSet(fs, "description", description),
-				ResponsibleID: valuePointerIfSet(fs, "responsible", resolvedResponsible),
-				Type:          stringPointerIfSet(fs, "type", taskType),
-				Priority:      intPointerIfSet(fs, "priority", priority),
-				DueDate:       stringPointerIfSet(fs, "due", dueDate),
+				Title:    stringPointerIfSet(fs, "title", title),
+				Type:     stringPointerIfSet(fs, "type", taskType),
+				Priority: intPointerIfSet(fs, "priority", priority),
+				DueDate:  stringPointerIfSet(fs, "due", dueDate),
 			}
 			if flagWasSet(fs, "tags") {
 				input.Tags = &parsedTags
@@ -328,20 +312,20 @@ func taskUncompleteCommand() Command {
 func taskMoveCommand() Command {
 	return Command{
 		Name:  "task move",
-		Usage: "task move ID (--board ID | --column ID | --parent ID)",
-		Short: "Move a task",
+		Usage: "task move ID --parent ID",
+		Short: "Move a task under a parent task",
 		Run: func(ctx *Ctx) error {
 			fs := flag.NewFlagSet("task move", flag.ContinueOnError)
-			boardID := fs.Int64("board", 0, "Board ID")
-			columnID := fs.Int64("column", 0, "Board column ID")
 			parentID := fs.Int64("parent", 0, "Parent task ID")
 			id, err := parseID(fs, ctx.Args, "task move")
 			if err != nil {
 				return err
 			}
-			selected := selectedFlags(fs, "board", "column", "parent")
-			if len(selected) != 1 {
-				return &usageError{err: errors.New("exactly one of --board, --column, or --parent is required")}
+			if !flagWasSet(fs, "parent") {
+				return &usageError{err: errors.New("--parent is required")}
+			}
+			if *parentID <= 0 {
+				return &usageError{err: errors.New("--parent must be positive")}
 			}
 
 			client, err := requireClient(ctx)
@@ -349,24 +333,7 @@ func taskMoveCommand() Command {
 				return err
 			}
 
-			var response json.RawMessage
-			switch selected[0] {
-			case "board":
-				if *boardID <= 0 {
-					return &usageError{err: errors.New("--board must be positive")}
-				}
-				response, err = client.SetBoard(context.Background(), id, *boardID)
-			case "column":
-				if *columnID <= 0 {
-					return &usageError{err: errors.New("--column must be positive")}
-				}
-				response, err = client.SetBoardColumn(context.Background(), id, *columnID)
-			case "parent":
-				if *parentID <= 0 {
-					return &usageError{err: errors.New("--parent must be positive")}
-				}
-				response, err = client.SetParent(context.Background(), id, *parentID)
-			}
+			response, err := client.SetParent(context.Background(), id, *parentID)
 			if err != nil {
 				return err
 			}
@@ -397,7 +364,7 @@ func validateTaskFields(
 	if flagWasSet(fs, "priority") && (*priority < 0 || *priority > 3) {
 		return &usageError{err: errors.New("--priority must be between 0 and 3")}
 	}
-	names := []string{"project", "board", "column", "parent"}
+	names := []string{"project", "column", "parent"}
 	for index, value := range ids {
 		if flagWasSet(fs, names[index]) && *value <= 0 {
 			return &usageError{err: fmt.Errorf("--%s must be positive", names[index])}
@@ -434,16 +401,6 @@ func anyFlagWasSet(fs *flag.FlagSet) bool {
 		isSet = true
 	})
 	return isSet
-}
-
-func selectedFlags(fs *flag.FlagSet, names ...string) []string {
-	selected := make([]string, 0, len(names))
-	for _, name := range names {
-		if flagWasSet(fs, name) {
-			selected = append(selected, name)
-		}
-	}
-	return selected
 }
 
 func stringPointerIfSet(fs *flag.FlagSet, name string, value *string) *string {

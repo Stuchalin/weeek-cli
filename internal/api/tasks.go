@@ -25,36 +25,29 @@ type TaskFilters struct {
 
 // TaskCreate contains the fields accepted when creating a task.
 type TaskCreate struct {
-	Title         string  `json:"title"`
-	Description   *string `json:"description,omitempty"`
-	ProjectID     *int64  `json:"projectId,omitempty"`
-	BoardID       *int64  `json:"boardId,omitempty"`
-	BoardColumnID *int64  `json:"boardColumnId,omitempty"`
-	ResponsibleID *string `json:"userId,omitempty"`
-	Type          *string `json:"type,omitempty"`
-	Priority      *int    `json:"priority,omitempty"`
-	DueDate       *string `json:"dueDate,omitempty"`
-	Tags          []int64 `json:"tags,omitempty"`
-	ParentID      *int64  `json:"parentId,omitempty"`
+	Title         string               `json:"title"`
+	Description   *string              `json:"description,omitempty"`
+	Day           *string              `json:"day,omitempty"`
+	Locations     []TaskCreateLocation `json:"locations"`
+	ResponsibleID *string              `json:"userId,omitempty"`
+	Type          *string              `json:"type,omitempty"`
+	Priority      *int                 `json:"priority,omitempty"`
+	ParentID      *int64               `json:"parentId,omitempty"`
+}
+
+// TaskCreateLocation places a newly created task in a project and optional column.
+type TaskCreateLocation struct {
+	ProjectID     int64  `json:"projectId"`
+	BoardColumnID *int64 `json:"boardColumnId"`
 }
 
 // TaskUpdate contains task fields that can be changed independently.
 type TaskUpdate struct {
-	Title         *string  `json:"title,omitempty"`
-	Description   *string  `json:"description,omitempty"`
-	ResponsibleID *string  `json:"userId,omitempty"`
-	Type          *string  `json:"type,omitempty"`
-	Priority      *int     `json:"priority,omitempty"`
-	DueDate       *string  `json:"dueDate,omitempty"`
-	Tags          *[]int64 `json:"tags,omitempty"`
-}
-
-type taskBoardChange struct {
-	BoardID int64 `json:"boardId"`
-}
-
-type taskBoardColumnChange struct {
-	BoardColumnID int64 `json:"boardColumnId"`
+	Title    *string  `json:"title,omitempty"`
+	Type     *string  `json:"type,omitempty"`
+	Priority *int     `json:"priority,omitempty"`
+	DueDate  *string  `json:"dueDate,omitempty"`
+	Tags     *[]int64 `json:"tags,omitempty"`
 }
 
 type taskParentChange struct {
@@ -98,6 +91,9 @@ func (c *Client) GetTask(ctx context.Context, id string) (json.RawMessage, error
 
 // CreateTask creates a task.
 func (c *Client) CreateTask(ctx context.Context, input TaskCreate) (json.RawMessage, error) {
+	if input.Locations == nil {
+		input.Locations = []TaskCreateLocation{}
+	}
 	return c.doJSON(ctx, http.MethodPost, "/tm/tasks", input)
 }
 
@@ -123,30 +119,6 @@ func (c *Client) Complete(ctx context.Context, id string) (json.RawMessage, erro
 // Uncomplete marks a task incomplete.
 func (c *Client) Uncomplete(ctx context.Context, id string) (json.RawMessage, error) {
 	return c.do(ctx, http.MethodPost, taskPath(id)+"/un-complete", nil)
-}
-
-// SetBoard moves a task to a board.
-func (c *Client) SetBoard(ctx context.Context, id string, boardID int64) (json.RawMessage, error) {
-	return c.doJSON(
-		ctx,
-		http.MethodPost,
-		taskPath(id)+"/board",
-		taskBoardChange{BoardID: boardID},
-	)
-}
-
-// SetBoardColumn moves a task to a board column.
-func (c *Client) SetBoardColumn(
-	ctx context.Context,
-	id string,
-	boardColumnID int64,
-) (json.RawMessage, error) {
-	return c.doJSON(
-		ctx,
-		http.MethodPost,
-		taskPath(id)+"/board-column",
-		taskBoardColumnChange{BoardColumnID: boardColumnID},
-	)
 }
 
 // SetParent changes a task's parent.

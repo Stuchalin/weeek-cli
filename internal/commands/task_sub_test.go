@@ -64,7 +64,7 @@ func TestTaskSubcommandsGolden(t *testing.T) {
 			},
 			method: http.MethodPost,
 			path:   "/tm/tasks/42/time-entries",
-			requestBody: `{"userId":"user-1","isOvertime":true,` +
+			requestBody: `{"userId":"user-1","isOvertime":1,` +
 				`"date":"2026-09-04","duration":45}`,
 			responseBody: `{"success":true,"data":{"id":"entry-1","duration":45}}`,
 			golden:       "task_time_entry_create.golden",
@@ -164,7 +164,7 @@ func TestTaskSubentityMutationCommands(t *testing.T) {
 			},
 			method: http.MethodPut,
 			path:   "/tm/tasks/42/time-entries/entry-1",
-			body: `{"userId":"user-1","isOvertime":false,` +
+			body: `{"userId":"user-1","isOvertime":0,` +
 				`"date":"2026-09-04","duration":30}`,
 		},
 		{

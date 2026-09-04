@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -48,4 +49,17 @@ func TestMeGolden(t *testing.T) {
 		t.Fatalf("me code = %d, want 0; stderr = %q", code, stderr.String())
 	}
 	assertGolden(t, "me.golden", stdout.Bytes())
+}
+
+func TestEnvelopeFieldRejectsMissingValue(t *testing.T) {
+	t.Parallel()
+
+	for _, response := range []json.RawMessage{
+		json.RawMessage(`{"success":true}`),
+		json.RawMessage(`{"user":null}`),
+	} {
+		if _, err := envelopeField(response, "user"); err == nil {
+			t.Errorf("envelopeField(%s) error = nil, want missing-value error", response)
+		}
+	}
 }

@@ -31,7 +31,7 @@ type CommentCreate struct {
 // TimeEntryInput contains the fields required to create or update a time entry.
 type TimeEntryInput struct {
 	UserID     string `json:"userId"`
-	IsOvertime bool   `json:"isOvertime"`
+	IsOvertime int    `json:"isOvertime"`
 	Date       string `json:"date"`
 	Duration   int    `json:"duration"`
 }

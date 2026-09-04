@@ -233,10 +233,12 @@ func taskTimeEntryCommand(isUpdate bool) Command {
 				return err
 			}
 			input := api.TimeEntryInput{
-				UserID:     *userID,
-				IsOvertime: *isOvertime,
-				Date:       *date,
-				Duration:   *duration,
+				UserID:   *userID,
+				Date:     *date,
+				Duration: *duration,
+			}
+			if *isOvertime {
+				input.IsOvertime = 1
 			}
 			var response json.RawMessage
 			if isUpdate {

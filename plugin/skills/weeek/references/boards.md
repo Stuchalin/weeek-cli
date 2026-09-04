@@ -48,8 +48,6 @@ weeek column move 9 --after 8
 Use task placement commands after resolving the IDs:
 
 ```sh
-weeek task move 123 --board 7
-weeek task move 123 --column 9
 weeek task location add 123 --project 42 --column 9
 ```
 

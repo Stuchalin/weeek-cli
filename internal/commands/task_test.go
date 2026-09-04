@@ -64,15 +64,15 @@ func TestTaskCommandsGolden(t *testing.T) {
 			name: "task create",
 			args: []string{
 				"task", "create", "--title", "Release", "--description", "Ship it",
-				"--project", "11", "--board", "12", "--column", "13",
+				"--project", "11", "--column", "13",
 				"--responsible", "user-42", "--type", "action", "--priority", "0",
-				"--due", "2026-09-05", "--tags", "7,9", "--parent", "4",
+				"--day", "2026-09-05", "--parent", "4",
 			},
 			method: http.MethodPost,
 			path:   "/tm/tasks",
-			requestBody: `{"title":"Release","description":"Ship it","projectId":11,` +
-				`"boardId":12,"boardColumnId":13,"userId":"user-42","type":"action",` +
-				`"priority":0,"dueDate":"2026-09-05","tags":[7,9],"parentId":4}`,
+			requestBody: `{"title":"Release","description":"Ship it","day":"2026-09-05",` +
+				`"locations":[{"projectId":11,"boardColumnId":13}],"userId":"user-42",` +
+				`"type":"action","priority":0,"parentId":4}`,
 			responseBody: `{"success":true,"task":{"id":43,"title":"Release"}}`,
 			golden:       "task_create.golden",
 		},
@@ -196,20 +196,6 @@ func TestTaskMutationCommands(t *testing.T) {
 			path:   "/tm/tasks/42/un-complete",
 		},
 		{
-			name:   "move to board",
-			args:   []string{"task", "move", "42", "--board", "12"},
-			method: http.MethodPost,
-			path:   "/tm/tasks/42/board",
-			body:   `{"boardId":12}`,
-		},
-		{
-			name:   "move to column",
-			args:   []string{"task", "move", "42", "--column", "13"},
-			method: http.MethodPost,
-			path:   "/tm/tasks/42/board-column",
-			body:   `{"boardColumnId":13}`,
-		},
-		{
 			name:   "move to parent",
 			args:   []string{"task", "move", "42", "--parent", "4"},
 			method: http.MethodPost,
@@ -305,15 +291,15 @@ func TestTaskCommandErrors(t *testing.T) {
 	})
 }
 
-func TestTaskMoveRequiresOneDestination(t *testing.T) {
+func TestTaskMoveValidatesParentBeforeClient(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name string
 		args []string
 	}{
-		{name: "missing destination", args: []string{"task", "move", "42"}},
-		{name: "multiple destinations", args: []string{"task", "move", "42", "--board", "1", "--column", "2"}},
+		{name: "missing parent", args: []string{"task", "move", "42"}},
+		{name: "zero parent", args: []string{"task", "move", "42", "--parent", "0"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -325,6 +311,22 @@ func TestTaskMoveRequiresOneDestination(t *testing.T) {
 				t.Errorf("task move code = %d, want 2", code)
 			}
 		})
+	}
+}
+
+func TestTaskUpdateValidatesTagsBeforeClient(t *testing.T) {
+	t.Parallel()
+
+	var stderr bytes.Buffer
+	code := NewRegistry("test-version").Run(
+		[]string{"task", "update", "42", "--tags", "invalid"},
+		&Ctx{Stderr: &stderr},
+	)
+	if code != 2 {
+		t.Errorf("task update code = %d, want 2", code)
+	}
+	if !strings.Contains(stderr.String(), "invalid tag id") {
+		t.Errorf("task update stderr = %q, want invalid tag error", stderr.String())
 	}
 }
 

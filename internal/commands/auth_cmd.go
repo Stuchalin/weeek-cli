@@ -144,6 +144,23 @@ func promptToken(reader io.Reader, writer io.Writer) (string, error) {
 	if _, err := fmt.Fprint(writer, "Token: "); err != nil {
 		return "", fmt.Errorf("writing token prompt: %w", err)
 	}
+	line, hidden, err := readTerminalLine(reader)
+	if hidden {
+		if _, newlineErr := fmt.Fprintln(writer); newlineErr != nil {
+			err = errors.Join(err, fmt.Errorf("writing token prompt terminator: %w", newlineErr))
+		}
+		if err != nil {
+			return "", err
+		}
+		token := strings.TrimSpace(line)
+		if token == "" {
+			return "", errors.New("token is required")
+		}
+		return token, nil
+	}
+	if err != nil {
+		return "", err
+	}
 
 	scanner := bufio.NewScanner(reader)
 	if !scanner.Scan() {

@@ -21,7 +21,7 @@ func TestClient_TaskSubentityMethods(t *testing.T) {
 	beforeID := int64(43)
 	timeEntry := TimeEntryInput{
 		UserID:     "user-1",
-		IsOvertime: true,
+		IsOvertime: 1,
 		Date:       "2026-09-04",
 		Duration:   45,
 	}
@@ -131,7 +131,7 @@ func TestClient_TaskSubentityMethods(t *testing.T) {
 			name:   "create time entry",
 			method: http.MethodPost,
 			path:   "/tm/tasks/42/time-entries",
-			body:   `{"userId":"user-1","isOvertime":true,"date":"2026-09-04","duration":45}`,
+			body:   `{"userId":"user-1","isOvertime":1,"date":"2026-09-04","duration":45}`,
 			want:   `{"success":true}`,
 			call: func(ctx context.Context, client *Client) (json.RawMessage, error) {
 				return client.CreateTaskTimeEntry(ctx, "42", timeEntry)
@@ -141,7 +141,7 @@ func TestClient_TaskSubentityMethods(t *testing.T) {
 			name:   "update time entry",
 			method: http.MethodPut,
 			path:   "/tm/tasks/42/time-entries/entry-1",
-			body:   `{"userId":"user-1","isOvertime":true,"date":"2026-09-04","duration":45}`,
+			body:   `{"userId":"user-1","isOvertime":1,"date":"2026-09-04","duration":45}`,
 			want:   `{"success":true}`,
 			call: func(ctx context.Context, client *Client) (json.RawMessage, error) {
 				return client.UpdateTaskTimeEntry(ctx, "42", "entry-1", timeEntry)

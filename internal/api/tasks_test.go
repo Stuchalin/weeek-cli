@@ -88,12 +88,12 @@ func TestClient_TaskMethods(t *testing.T) {
 
 	description := "Detailed task"
 	projectID := int64(11)
-	boardID := int64(12)
 	columnID := int64(13)
 	responsibleID := "user-42"
 	taskType := "action"
 	priority := 0
-	dueDate := "2026-09-05"
+	day := "2026-09-05"
+	dueDate := "2026-09-06"
 	parentID := int64(9)
 	tags := []int64{4, 5}
 	title := "Updated task"
@@ -119,21 +119,21 @@ func TestClient_TaskMethods(t *testing.T) {
 			name:   "create task",
 			method: http.MethodPost,
 			path:   "/tm/tasks",
-			body: `{"title":"New task","description":"Detailed task","projectId":11,` +
-				`"boardId":12,"boardColumnId":13,"userId":"user-42","type":"action",` +
-				`"priority":0,"dueDate":"2026-09-05","tags":[4,5],"parentId":9}`,
+			body: `{"title":"New task","description":"Detailed task","day":"2026-09-05",` +
+				`"locations":[{"projectId":11,"boardColumnId":13}],"userId":"user-42",` +
+				`"type":"action","priority":0,"parentId":9}`,
 			call: func(ctx context.Context, client *Client) (json.RawMessage, error) {
 				return client.CreateTask(ctx, TaskCreate{
-					Title:         "New task",
-					Description:   &description,
-					ProjectID:     &projectID,
-					BoardID:       &boardID,
-					BoardColumnID: &columnID,
+					Title:       "New task",
+					Description: &description,
+					Day:         &day,
+					Locations: []TaskCreateLocation{{
+						ProjectID:     projectID,
+						BoardColumnID: &columnID,
+					}},
 					ResponsibleID: &responsibleID,
 					Type:          &taskType,
 					Priority:      &priority,
-					DueDate:       &dueDate,
-					Tags:          tags,
 					ParentID:      &parentID,
 				})
 			},
@@ -142,17 +142,15 @@ func TestClient_TaskMethods(t *testing.T) {
 			name:   "update task",
 			method: http.MethodPut,
 			path:   "/tm/tasks/42",
-			body: `{"title":"Updated task","description":"Detailed task","userId":"user-42",` +
-				`"type":"action","priority":0,"dueDate":"2026-09-05","tags":[4,5]}`,
+			body: `{"title":"Updated task","type":"action","priority":0,` +
+				`"dueDate":"2026-09-06","tags":[4,5]}`,
 			call: func(ctx context.Context, client *Client) (json.RawMessage, error) {
 				return client.UpdateTask(ctx, "42", TaskUpdate{
-					Title:         &title,
-					Description:   &description,
-					ResponsibleID: &responsibleID,
-					Type:          &taskType,
-					Priority:      &priority,
-					DueDate:       &dueDate,
-					Tags:          &tags,
+					Title:    &title,
+					Type:     &taskType,
+					Priority: &priority,
+					DueDate:  &dueDate,
+					Tags:     &tags,
 				})
 			},
 		},
@@ -178,24 +176,6 @@ func TestClient_TaskMethods(t *testing.T) {
 			path:   "/tm/tasks/42/un-complete",
 			call: func(ctx context.Context, client *Client) (json.RawMessage, error) {
 				return client.Uncomplete(ctx, "42")
-			},
-		},
-		{
-			name:   "set board",
-			method: http.MethodPost,
-			path:   "/tm/tasks/42/board",
-			body:   `{"boardId":12}`,
-			call: func(ctx context.Context, client *Client) (json.RawMessage, error) {
-				return client.SetBoard(ctx, "42", boardID)
-			},
-		},
-		{
-			name:   "set board column",
-			method: http.MethodPost,
-			path:   "/tm/tasks/42/board-column",
-			body:   `{"boardColumnId":13}`,
-			call: func(ctx context.Context, client *Client) (json.RawMessage, error) {
-				return client.SetBoardColumn(ctx, "42", columnID)
 			},
 		},
 		{
@@ -243,6 +223,27 @@ func TestClient_TaskMethods(t *testing.T) {
 				t.Errorf("task method response = %q", got)
 			}
 		})
+	}
+}
+
+func TestClient_CreateTaskAlwaysSendsLocationsArray(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		body, err := io.ReadAll(request.Body)
+		if err != nil {
+			t.Fatalf("read request body: %v", err)
+		}
+		if got := string(body); got != `{"title":"Unplaced task","locations":[]}` {
+			t.Errorf("request body = %q, want required empty locations array", got)
+		}
+		_, _ = response.Write([]byte(`{"success":true}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "test-token", server.Client())
+	if _, err := client.CreateTask(t.Context(), TaskCreate{Title: "Unplaced task"}); err != nil {
+		t.Fatalf("CreateTask() error = %v", err)
 	}
 }
 

@@ -34,17 +34,20 @@ weeek task get 123
 ## Create and update
 
 ```text
-weeek task create --title TITLE [--description TEXT] [--project ID] [--board ID] [--column ID] [--responsible ID|me] [--type TYPE] [--priority N] [--due DATE] [--tags ID[,ID...]] [--parent ID]
-weeek task update ID [--title TITLE] [--description TEXT] [--responsible ID|me] [--type TYPE] [--priority N] [--due DATE] [--tags ID[,ID...]]
+weeek task create --title TITLE [--description TEXT] [--project ID [--column ID]] [--responsible ID|me] [--type TYPE] [--priority N] [--day DATE] [--parent ID]
+weeek task update ID [--title TITLE] [--type TYPE] [--priority N] [--due DATE] [--tags ID[,ID...]]
 ```
 
-`--title` is required for create. Update requires at least one field flag. Project,
-board, column, and parent IDs must be positive. Priority is 0 through 3. Tags may
-be comma-separated or supplied with repeated `--tags` flags.
+`--title` is required for create. Create sends the API's required `locations`
+array; `--column` therefore requires `--project`. Project, column, and parent IDs
+must be positive. Update requires at least one field flag. Priority is 0 through
+3. Update tags may be comma-separated or supplied with repeated `--tags` flags.
+Change assignees with `task assignee add|remove`; the API does not expose task
+description updates.
 
 ```sh
 weeek task create --title "Ship CLI" --project 42 --responsible me --priority 2
-weeek task update 123 --description "Release candidate" --tags 10,11
+weeek task update 123 --priority 2 --tags 10,11
 ```
 
 ## Lifecycle and placement
@@ -53,14 +56,14 @@ weeek task update 123 --description "Release candidate" --tags 10,11
 weeek task complete ID
 weeek task uncomplete ID
 weeek task delete ID
-weeek task move ID (--board ID | --column ID | --parent ID)
+weeek task move ID --parent ID
 ```
 
-Exactly one destination flag is required for `task move`.
+Use `task location add` below to place a task in a project or board column.
 
 ```sh
 weeek task get 123
-weeek task move 123 --column 9
+weeek task move 123 --parent 100
 weeek task complete 123
 ```
 
