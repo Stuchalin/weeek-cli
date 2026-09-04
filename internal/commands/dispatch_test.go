@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"flag"
 	"os"
@@ -207,6 +208,10 @@ func TestRegistry_RunVersionGolden(t *testing.T) {
 
 func assertGolden(t *testing.T, name string, got []byte) {
 	t.Helper()
+
+	if !json.Valid(bytes.TrimSpace(got)) {
+		t.Fatalf("Run() stdout = %q, want valid JSON", got)
+	}
 
 	path := filepath.Join("testdata", name)
 	if os.Getenv("GOLDEN_UPDATE") == "1" {
