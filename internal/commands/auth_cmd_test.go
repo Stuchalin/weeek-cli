@@ -142,7 +142,7 @@ func TestAuthStatusUnauthorized(t *testing.T) {
 	if code != 1 {
 		t.Errorf("auth status code = %d, want 1", code)
 	}
-	if got := stderr.String(); got != "{\"error\":\"token is invalid or expired\"}\n" {
+	if got := stderr.String(); got != "{\"error\":\"token is invalid or expired\",\"status\":0}\n" {
 		t.Errorf("auth status stderr = %q, want invalid-token error", got)
 	}
 }

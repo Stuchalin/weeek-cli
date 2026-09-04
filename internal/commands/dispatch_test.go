@@ -45,7 +45,7 @@ func TestRegistry_Run(t *testing.T) {
 				},
 			},
 			wantCode:   1,
-			wantStderr: "{\"error\":\"task not found\"}\n",
+			wantStderr: "{\"error\":\"task not found\",\"status\":0}\n",
 		},
 		{
 			name: "flag error prints command usage",
@@ -251,7 +251,7 @@ func TestWriteError_ProducesOneLineJSON(t *testing.T) {
 	var output bytes.Buffer
 	WriteError(&output, errors.New("first line\nsecond line"))
 
-	const want = "{\"error\":\"first line\\nsecond line\"}\n"
+	const want = "{\"error\":\"first line\\nsecond line\",\"status\":0}\n"
 	if got := output.String(); got != want {
 		t.Errorf("WriteError() = %q, want %q", got, want)
 	}

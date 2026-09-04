@@ -50,6 +50,8 @@ func (e *usageError) Unwrap() error {
 func NewRegistry(version string) Registry {
 	registry := Registry{}
 	registerAuthCommands(registry)
+	registerMeCommand(registry)
+	registerWorkspaceCommands(registry)
 	registry.Register(versionCommand(version))
 	return registry
 }
@@ -299,7 +301,18 @@ func writeCommandUsage(writer io.Writer, command Command, err error) {
 
 // WriteError writes the stable one-line JSON error contract.
 func WriteError(writer io.Writer, err error) {
-	if encodeErr := json.NewEncoder(writer).Encode(map[string]string{"error": err.Error()}); encodeErr != nil {
+	status := 0
+	if apiErr, ok := errors.AsType[*api.APIError](err); ok {
+		status = apiErr.Status
+	}
+	payload := struct {
+		Error  string `json:"error"`
+		Status int    `json:"status"`
+	}{
+		Error:  err.Error(),
+		Status: status,
+	}
+	if encodeErr := json.NewEncoder(writer).Encode(payload); encodeErr != nil {
 		fmt.Fprintf(writer, "{\"error\":%q}\n", "writing error output: "+encodeErr.Error())
 	}
 }
