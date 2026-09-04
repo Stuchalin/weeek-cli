@@ -69,6 +69,7 @@ func registerTaskCommands(registry Registry) {
 	registry.Register(taskCompleteCommand())
 	registry.Register(taskUncompleteCommand())
 	registry.Register(taskMoveCommand())
+	registerTaskSubcommands(registry)
 }
 
 func taskListCommand() Command {

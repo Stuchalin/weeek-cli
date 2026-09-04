@@ -151,6 +151,9 @@ func promptToken(reader io.Reader, writer io.Writer) (string, error) {
 }
 
 func writeRawJSON(writer io.Writer, response json.RawMessage) error {
+	if len(response) == 0 {
+		response = json.RawMessage(`{}`)
+	}
 	if _, err := writer.Write(response); err != nil {
 		return fmt.Errorf("writing api response: %w", err)
 	}
