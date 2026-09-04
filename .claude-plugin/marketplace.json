@@ -1,0 +1,15 @@
+{
+  "name": "weeek-cli",
+  "owner": {
+    "name": "Stuchalin",
+    "url": "https://github.com/Stuchalin"
+  },
+  "plugins": [
+    {
+      "name": "weeek",
+      "source": "./plugin",
+      "description": "Use the weeek CLI to manage Weeek tasks and workspace data.",
+      "version": "0.0.0"
+    }
+  ]
+}

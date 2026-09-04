@@ -1,0 +1,20 @@
+{
+  "name": "weeek-cli",
+  "interface": {
+    "displayName": "weeek-cli"
+  },
+  "plugins": [
+    {
+      "name": "weeek",
+      "source": {
+        "source": "local",
+        "path": "./plugin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

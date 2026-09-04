@@ -25,11 +25,8 @@ release-build:
 	done
 
 check-plugin:
-	@if [ -x scripts/check-plugin.sh ]; then \
-		scripts/check-plugin.sh; \
-	else \
-		echo "check-plugin is not implemented yet"; \
-	fi
+	scripts/check-plugin.sh
+	scripts/check-plugin_test.sh
 
 clean:
 	rm -rf $(BINARY) dist
