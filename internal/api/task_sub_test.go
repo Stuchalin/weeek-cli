@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestClient_TaskSubentityMethods(t *testing.T) {
@@ -240,8 +241,13 @@ func TestClient_UploadTaskAttachment(t *testing.T) {
 	}
 
 	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
-		if _, hasDeadline := request.Context().Deadline(); hasDeadline {
-			t.Error("upload request context has a deadline")
+		deadline, hasDeadline := request.Context().Deadline()
+		if !hasDeadline {
+			t.Fatal("upload request context has no deadline")
+		}
+		remaining := time.Until(deadline)
+		if remaining <= requestTimeout || remaining > uploadTimeout {
+			t.Errorf("upload request deadline is %s away, want more than %s and at most %s", remaining, requestTimeout, uploadTimeout)
 		}
 		if request.Method != http.MethodPost || request.URL.Path != "/tm/tasks/42/attachments" {
 			t.Errorf("request = %s %s, want POST /tm/tasks/42/attachments", request.Method, request.URL.Path)

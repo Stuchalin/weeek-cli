@@ -1,20 +1,24 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 )
 
-const maxAttachmentSize = 100 * 1024 * 1024
+const (
+	maxAttachmentSize = 100 * 1024 * 1024
+	uploadTimeout     = 30 * time.Minute
+)
 
 // CommentFilters contains task-comment list pagination.
 type CommentFilters struct {
@@ -193,63 +197,132 @@ func (c *Client) DeleteTaskTimeEntry(
 	return c.do(ctx, http.MethodDelete, path, nil)
 }
 
-// UploadTaskAttachment uploads one file to a task without the default request timeout.
+// UploadTaskAttachment uploads one file to a task with an extended request timeout.
 func (c *Client) UploadTaskAttachment(
 	ctx context.Context,
 	taskID string,
 	filePath string,
-) (json.RawMessage, error) {
-	info, err := os.Stat(filePath)
+) (responseBody json.RawMessage, err error) {
+	body, contentType, contentLength, err := createAttachmentBody(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("reading attachment metadata: %w", err)
+		return nil, err
 	}
-	if !info.Mode().IsRegular() {
-		return nil, errors.New("attachment must be a regular file")
-	}
-	if info.Size() > maxAttachmentSize {
-		return nil, fmt.Errorf("attachment exceeds %d byte limit", maxAttachmentSize)
-	}
-	contents, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("reading attachment: %w", err)
-	}
-	if len(contents) > maxAttachmentSize {
-		return nil, fmt.Errorf("attachment exceeds %d byte limit", maxAttachmentSize)
-	}
+	defer func() {
+		cleanupErr := cleanupAttachmentBody(body)
+		if cleanupErr == nil {
+			return
+		}
 
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
-	part, err := writer.CreateFormFile("files[]", filepath.Base(filePath))
-	if err != nil {
-		return nil, fmt.Errorf("creating attachment form: %w", err)
-	}
-	if _, err := part.Write(contents); err != nil {
-		return nil, fmt.Errorf("writing attachment form: %w", err)
-	}
-	if err := writer.Close(); err != nil {
-		return nil, fmt.Errorf("closing attachment form: %w", err)
-	}
+		cleanupErr = fmt.Errorf("cleaning attachment form: %w", cleanupErr)
+		if err == nil {
+			responseBody = nil
+			err = cleanupErr
+			return
+		}
+		err = errors.Join(err, cleanupErr)
+	}()
 
 	request, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
 		c.baseURL+taskPath(taskID)+"/attachments",
-		&body,
+		io.NopCloser(body),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating api request: %w", err)
 	}
+	request.ContentLength = contentLength
 	request.Header.Set("Authorization", "Bearer "+c.token)
-	request.Header.Set("Content-Type", writer.FormDataContentType())
+	request.Header.Set("Content-Type", contentType)
 
 	uploadClient := *c.httpClient
-	uploadClient.Timeout = 0
+	uploadClient.Timeout = uploadTimeout
 	response, err := uploadClient.Do(request)
 	if err != nil {
 		return nil, fmt.Errorf("sending api request: %w", err)
 	}
 
 	return readResponse(response)
+}
+
+func createAttachmentBody(filePath string) (_ *os.File, _ string, _ int64, err error) {
+	body, err := os.CreateTemp("", "weeek-attachment-*")
+	if err != nil {
+		return nil, "", 0, fmt.Errorf("creating attachment form: %w", err)
+	}
+	removeBody := true
+	defer func() {
+		if !removeBody {
+			return
+		}
+		if cleanupErr := cleanupAttachmentBody(body); cleanupErr != nil {
+			err = errors.Join(err, fmt.Errorf("cleaning attachment form: %w", cleanupErr))
+		}
+	}()
+
+	writer := multipart.NewWriter(body)
+	contentType := writer.FormDataContentType()
+	if err := writeAttachmentPart(writer, filePath); err != nil {
+		return nil, "", 0, err
+	}
+	if err := writer.Close(); err != nil {
+		return nil, "", 0, fmt.Errorf("closing attachment form: %w", err)
+	}
+
+	contentLength, err := body.Seek(0, io.SeekEnd)
+	if err != nil {
+		return nil, "", 0, fmt.Errorf("measuring attachment form: %w", err)
+	}
+	if _, err := body.Seek(0, io.SeekStart); err != nil {
+		return nil, "", 0, fmt.Errorf("rewinding attachment form: %w", err)
+	}
+
+	removeBody = false
+	return body, contentType, contentLength, nil
+}
+
+func writeAttachmentPart(writer *multipart.Writer, filePath string) (err error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("reading attachment: %w", err)
+	}
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("closing attachment: %w", closeErr))
+		}
+	}()
+
+	info, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("reading attachment metadata: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return errors.New("attachment must be a regular file")
+	}
+	if info.Size() > maxAttachmentSize {
+		return fmt.Errorf("attachment exceeds %d byte limit", maxAttachmentSize)
+	}
+
+	part, err := writer.CreateFormFile("files[]", filepath.Base(filePath))
+	if err != nil {
+		return fmt.Errorf("creating attachment form: %w", err)
+	}
+	written, err := io.Copy(part, io.LimitReader(file, maxAttachmentSize+1))
+	if err != nil {
+		return fmt.Errorf("writing attachment form: %w", err)
+	}
+	if written > maxAttachmentSize {
+		return fmt.Errorf("attachment exceeds %d byte limit", maxAttachmentSize)
+	}
+
+	return nil
+}
+
+func cleanupAttachmentBody(body *os.File) error {
+	name := body.Name()
+	closeErr := body.Close()
+	removeErr := os.Remove(name)
+	return errors.Join(closeErr, removeErr)
 }
 
 // AddTaskLocation adds a task to a project and optional board column.
