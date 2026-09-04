@@ -11,11 +11,6 @@ weeek task list --responsible me --completed=false \
 
 ## Installation
 
-Publication status: the GitHub repository and its first release have not been
-published yet. Until those external steps are complete, build the CLI from a
-local checkout with `make build`. The download, `go install`, and plugin install
-commands below apply after publication.
-
 ### Pre-built binaries
 
 Download the binary for your platform and its `.sha256` file from
@@ -37,6 +32,20 @@ chmod +x weeek
 sudo mv weeek /usr/local/bin/weeek
 weeek version
 ```
+
+### Install with Homebrew
+
+On macOS or Linux, install from the
+[Homebrew tap](https://github.com/Stuchalin/homebrew-weeek-cli):
+
+```sh
+brew tap Stuchalin/weeek-cli
+brew trust Stuchalin/weeek-cli
+brew install weeek
+```
+
+`brew trust` is required once by recent Homebrew versions before installing
+from third-party taps.
 
 ### Install with Go
 
@@ -161,3 +170,19 @@ Before tagging a release, update the version in `plugin/.claude-plugin/plugin.js
 `plugin/.codex-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and the CLI
 compatibility version in `plugin/skills/weeek/SKILL.md`, then run
 `make check-plugin`. Keep all four values identical.
+
+After the release workflow publishes the binaries, update the Homebrew formula
+in [Stuchalin/homebrew-weeek-cli](https://github.com/Stuchalin/homebrew-weeek-cli):
+
+1. Collect the checksums of the new release:
+
+   ```sh
+   for f in weeek_darwin_arm64 weeek_darwin_amd64 weeek_linux_arm64 weeek_linux_amd64; do
+     echo "$f: $(curl -sL "https://github.com/Stuchalin/weeek-cli/releases/download/vX.Y.Z/$f.sha256")"
+   done
+   ```
+
+2. In `Formula/weeek.rb`, bump `version` and replace the four `url` and
+   `sha256` values.
+3. Commit and push the tap repository. Users receive the update with
+   `brew update && brew upgrade weeek`.
