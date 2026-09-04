@@ -1,0 +1,29 @@
+# ralphex project config — weeek-cli
+#
+# Roles ("Swapping implementation and review roles" from ralphex docs):
+#   implementation + both internal reviews + fix steps -> codex (gpt-5.6-sol:high)
+#   external review                                    -> claude (glm-5.3, 1M context)
+#
+# Slot naming quirk: ralphex logs label the executor "claude execution" no
+# matter what claude_command points at — here it means codex. The external
+# phase is labeled "codex review" — here it means claude.
+#
+# Everything is project-local and self-contained:
+#   - models are pinned inside .ralphex/scripts/* (not in ~/.codex or ~/.claude)
+#   - scripts are vendored into .ralphex/scripts/ (no dependency on a ralphex checkout)
+#   - executor stays the default "claude" slot, so external review stays enabled
+#     (executor = codex / --codex would force external_review_tool = none)
+
+# --- executor slot: codex through the stream-json wrapper ---
+# tasks, internal multi-agent reviews and external-review fixes run on
+# gpt-5.6-sol / high (pinned in the script, overridable via CODEX_MODEL /
+# CODEX_EFFORT env for one-off runs)
+claude_command       = .ralphex/scripts/codex-as-claude.sh
+claude_args          =
+
+# --- external review slot: claude through a custom script ---
+# reviews the branch diff, reports "file:line - description" findings or
+# "NO ISSUES FOUND"; findings are then evaluated and fixed by the executor
+# (codex), and the loop repeats until clean
+external_review_tool = custom
+custom_review_script = .ralphex/scripts/claude-review.sh
