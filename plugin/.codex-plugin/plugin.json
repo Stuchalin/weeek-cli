@@ -1,0 +1,19 @@
+{
+  "name": "weeek",
+  "version": "0.0.0",
+  "description": "Use the weeek CLI to manage Weeek tasks, boards, projects, and workspace data.",
+  "author": {
+    "name": "Stuchalin",
+    "url": "https://github.com/Stuchalin"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Weeek",
+    "shortDescription": "Manage Weeek work from Codex.",
+    "longDescription": "Use the weeek CLI to inspect and manage tasks, boards, projects, portfolios, and workspace data.",
+    "developerName": "Stuchalin",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Show my open Weeek tasks."
+  }
+}

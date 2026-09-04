@@ -1,0 +1,10 @@
+{
+  "name": "weeek",
+  "version": "0.0.0",
+  "description": "Use the weeek CLI to manage Weeek tasks, boards, projects, and workspace data.",
+  "author": {
+    "name": "Stuchalin",
+    "url": "https://github.com/Stuchalin"
+  },
+  "skills": "./skills/"
+}
