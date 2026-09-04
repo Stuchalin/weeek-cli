@@ -118,8 +118,12 @@ command. Flags may appear before or after positional arguments.
 
 ## Output contract
 
-- Successful commands write the Weeek API JSON response to stdout unchanged.
-- Errors write one JSON object to stderr, with `error` and `status` fields.
+- API commands write the Weeek API JSON response to stdout unchanged. Commands
+  that combine responses or report local state, such as `me`, `auth`, and
+  `version`, write their own JSON objects.
+- API, network, and authentication errors write one JSON object to stderr, with
+  `error` and `status` fields. Usage errors write a short message and command
+  usage to stderr.
 - Exit code `0` means success, `1` means an API, network, or authentication
   failure, and `2` means invalid command usage.
 
