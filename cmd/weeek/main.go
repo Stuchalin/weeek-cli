@@ -18,8 +18,16 @@ func main() {
 }
 
 func run(args []string, stdout, stderr io.Writer) int {
+	return runWithInput(args, os.Stdin, stdout, stderr)
+}
+
+func runWithInput(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	registry := commands.NewRegistry(version)
 	ctx := &commands.Ctx{
+		NewAPIClient: func(token string) *api.Client {
+			return api.NewClient(apiBaseURL, token, nil)
+		},
+		Stdin:  stdin,
 		Stdout: stdout,
 		Stderr: stderr,
 	}

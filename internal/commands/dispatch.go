@@ -15,10 +15,12 @@ import (
 
 // Ctx contains the dependencies and arguments available to a command.
 type Ctx struct {
-	Client *api.Client
-	Stdout io.Writer
-	Stderr io.Writer
-	Args   []string
+	Client       *api.Client
+	NewAPIClient func(string) *api.Client
+	Stdin        io.Reader
+	Stdout       io.Writer
+	Stderr       io.Writer
+	Args         []string
 }
 
 // Command describes one command in the CLI registry.
@@ -47,6 +49,7 @@ func (e *usageError) Unwrap() error {
 // NewRegistry creates the built-in command registry.
 func NewRegistry(version string) Registry {
 	registry := Registry{}
+	registerAuthCommands(registry)
 	registry.Register(versionCommand(version))
 	return registry
 }

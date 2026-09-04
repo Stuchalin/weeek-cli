@@ -45,7 +45,7 @@ func TestRunCommandsWithoutToken(t *testing.T) {
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer
 
-			gotCode := run(tt.args, &stdout, &stderr)
+			gotCode := runWithInput(tt.args, strings.NewReader(""), &stdout, &stderr)
 			if gotCode != tt.wantCode {
 				t.Errorf("run() code = %d, want %d", gotCode, tt.wantCode)
 			}

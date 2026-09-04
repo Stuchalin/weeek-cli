@@ -24,7 +24,7 @@ func Token() (string, error) {
 		return token, nil
 	}
 
-	path, err := configPath()
+	path, err := ConfigPath()
 	if err != nil {
 		return "", err
 	}
@@ -54,7 +54,7 @@ func Save(token string) (saveErr error) {
 		return errors.New("token must not be empty")
 	}
 
-	path, err := configPath()
+	path, err := ConfigPath()
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func Save(token string) (saveErr error) {
 
 // Delete removes the saved Weeek API token. It succeeds when no config exists.
 func Delete() error {
-	path, err := configPath()
+	path, err := ConfigPath()
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,8 @@ func Delete() error {
 	return nil
 }
 
-func configPath() (string, error) {
+// ConfigPath returns the path used for the saved Weeek API token.
+func ConfigPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("finding home directory: %w", err)
