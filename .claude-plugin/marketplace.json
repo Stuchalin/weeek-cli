@@ -9,7 +9,7 @@
       "name": "weeek",
       "source": "./plugin",
       "description": "Use the weeek CLI to manage Weeek tasks and workspace data.",
-      "version": "0.0.0"
+      "version": "0.1.0"
     }
   ]
 }

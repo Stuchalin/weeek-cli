@@ -119,7 +119,15 @@ assert_rejected "version is not semver"
 replace_text "plugin/skills/weeek/SKILL.md" "---" "not-frontmatter"
 assert_rejected "has no YAML frontmatter"
 
-replace_text "plugin/skills/weeek/SKILL.md" "0.0.0" "version-not-mentioned"
+plugin_version=$(python3 - "$fixture_root/plugin/.claude-plugin/plugin.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as fh:
+    print(json.load(fh)["version"])
+PY
+)
+replace_text "plugin/skills/weeek/SKILL.md" "$plugin_version" "version-not-mentioned"
 assert_rejected "plugin version is not mentioned"
 
 rm "$fixture_root/plugin/skills/weeek/references/tasks.md"
