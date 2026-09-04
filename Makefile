@@ -31,4 +31,5 @@ check-plugin:
 	scripts/check-plugin_test.sh
 
 clean:
-	rm -rf $(BINARY) dist
+	rm -f -- weeek
+	rm -rf -- dist
