@@ -6,6 +6,7 @@ repo_root=$(CDPATH='' cd -- "$(dirname "$0")/.." && pwd)
 
 python3 - "$repo_root" <<'PY'
 import json
+import os
 import pathlib
 import re
 import sys
@@ -54,6 +55,11 @@ if codex_manifest["version"] != version:
     raise SystemExit("check-plugin: plugin manifest versions do not match")
 if re.fullmatch(r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)", version) is None:
     raise SystemExit(f"check-plugin: plugin version is not semver: {version}")
+expected_version = os.environ.get("WEEEK_PLUGIN_VERSION")
+if expected_version and version != expected_version:
+    raise SystemExit(
+        f"check-plugin: plugin version {version} does not match release version {expected_version}"
+    )
 
 try:
     skill = skill_path.read_text(encoding="utf-8")

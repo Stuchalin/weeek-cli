@@ -68,6 +68,18 @@ reset_fixture
 
 "$fixture_root/scripts/check-plugin.sh" >/dev/null
 
+if output=$(WEEEK_PLUGIN_VERSION=999.0.0 "$fixture_root/scripts/check-plugin.sh" 2>&1); then
+    echo "check-plugin test: mismatched release version was accepted" >&2
+    exit 1
+fi
+case "$output" in
+    *"does not match release version 999.0.0"*) ;;
+    *)
+        echo "check-plugin test: expected release version mismatch, got: $output" >&2
+        exit 1
+        ;;
+esac
+
 assert_rejected() {
     expected=$1
     if output=$("$fixture_root/scripts/check-plugin.sh" 2>&1); then

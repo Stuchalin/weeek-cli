@@ -27,7 +27,14 @@ jobs:
       - name: Test
         run: go test ./...
       - name: Validate plugin
-        run: make check-plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            WEEEK_PLUGIN_VERSION="${GITHUB_REF_NAME#v}" make check-plugin
+          else
+            make check-plugin
+          fi
 
   release-build:
     name: Build ${{ matrix.goos }}/${{ matrix.goarch }}

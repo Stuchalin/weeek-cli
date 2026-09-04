@@ -133,6 +133,15 @@ func readResponse(response *http.Response) (json.RawMessage, error) {
 	}
 
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
+		if response.StatusCode == http.StatusNoContent && len(body) == 0 {
+			return nil, nil
+		}
+		if !json.Valid(body) {
+			return nil, fmt.Errorf(
+				"decoding api response: status %d returned invalid JSON",
+				response.StatusCode,
+			)
+		}
 		return json.RawMessage(body), nil
 	}
 

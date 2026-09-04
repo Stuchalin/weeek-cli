@@ -70,6 +70,48 @@ func TestClient_DoSuccess(t *testing.T) {
 	}
 }
 
+func TestClient_DoNoContentSuccess(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		response.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "secret", server.Client())
+	got, err := client.do(t.Context(), http.MethodDelete, "/items/42", nil)
+	if err != nil {
+		t.Fatalf("do() error = %v", err)
+	}
+	if got != nil {
+		t.Errorf("do() body = %q, want nil", got)
+	}
+}
+
+func TestClient_DoRejectsInvalidJSON(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, _ *http.Request) {
+		response.WriteHeader(http.StatusOK)
+		if _, err := io.WriteString(response, "not-json"); err != nil {
+			t.Errorf("write response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "secret", server.Client())
+	got, err := client.do(t.Context(), http.MethodGet, "/items", nil)
+	if err == nil {
+		t.Fatal("do() error = nil, want invalid JSON error")
+	}
+	if !strings.Contains(err.Error(), "status 200 returned invalid JSON") {
+		t.Errorf("do() error = %q, want response status and invalid JSON context", err)
+	}
+	if got != nil {
+		t.Errorf("do() body = %q, want nil", got)
+	}
+}
+
 func TestClient_DoAPIError(t *testing.T) {
 	t.Parallel()
 
